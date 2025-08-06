@@ -42,4 +42,19 @@ class ExpediaController extends Controller
 
         return response()->json($response->json(), $response->status());
     }
+
+    /**
+     * Retrieve region information from Expedia Rapid API.
+     */
+    public function getRegion(Request $request, string $region_id)
+    {
+        $params = $request->only(['language', 'include']);
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get("https://test.expediapartnercentral.com/rapid/regions/{$region_id}", $params);
+
+        return response()->json($response->json(), $response->status());
+    }
 }
