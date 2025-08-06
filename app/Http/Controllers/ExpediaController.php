@@ -52,6 +52,30 @@ class ExpediaController extends Controller
     }
 
     /**
+     * Retrieve hotel chains from Expedia Rapid API.
+     */
+    public function getChains(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'limit' => 'nullable|integer',
+            'token' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get('https://test.expediapartnercentral.com/rapid/chains', $params);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
      * Retrieve region information from Expedia Rapid API.
      */
     public function getRegion(Request $request, string $region_id)
