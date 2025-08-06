@@ -173,4 +173,88 @@ class ExpediaControllerTest extends TestCase
 
         $this->assertEquals(422, $response->status());
     }
+
+    public function test_retrieve_itinerary_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/itineraries*' => Http::response([
+                'itineraries' => [
+                    ['id' => '1']
+                ]
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/itineraries', 'GET', [
+            'affiliate_reference_id' => 'ref123',
+            'email' => 'demo@example.com',
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->retrieveItinerary($req));
+
+        $this->assertEquals(200, $response->status());
+        $data = $response->getData(true);
+        $this->assertTrue($data['success']);
+        $this->assertNotEmpty($data['data']['itineraries']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/itineraries'
+                && $request['affiliate_reference_id'] === 'ref123'
+                && $request['email'] === 'demo@example.com';
+        });
+    }
+
+    public function test_retrieve_itinerary_requires_parameters()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/itineraries', 'GET');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->retrieveItinerary($req));
+
+        $this->assertEquals(422, $response->status());
+    }
+
+    public function test_cancel_itinerary_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/itineraries/*' => Http::response([], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/itineraries', 'DELETE', [
+            'cancel_link' => 'https://test.expediapartnercentral.com/rapid/itineraries/1'
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->cancelItinerary($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertTrue($response->getData(true)['success']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/itineraries/1'
+                && $request->method() === 'DELETE';
+        });
+    }
+
+    public function test_cancel_itinerary_requires_link()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/itineraries', 'DELETE');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->cancelItinerary($req));
+
+        $this->assertEquals(422, $response->status());
+    }
 }
