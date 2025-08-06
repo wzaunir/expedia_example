@@ -173,4 +173,56 @@ class ExpediaControllerTest extends TestCase
 
         $this->assertEquals(422, $response->status());
     }
+
+    public function test_get_properties_by_polygon_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/properties/geography*' => Http::response([
+                'properties' => [
+                    ['id' => '1', 'name' => 'Demo Property']
+                ]
+            ], 200)
+        ]);
+
+        $geoJson = json_encode([
+            'type' => 'Polygon',
+            'coordinates' => [[[0,0], [0,1], [1,1], [1,0], [0,0]]]
+        ]);
+
+        $request = Request::create('/api/expedia/properties/geography', 'POST', [
+            'include' => 'details',
+            'supply_source' => 'expedia',
+        ], [], [], [], $geoJson);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+        $request->headers->set('Content-Type', 'application/json');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getPropertiesByPolygon($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('Demo Property', $response->getData(true)['properties'][0]['name']);
+
+        Http::assertSent(function ($request) use ($geoJson) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/geography?include=details&supply_source=expedia'
+                && $request->body() === $geoJson
+                && $request->method() === 'POST';
+        });
+    }
+
+    public function test_get_properties_by_polygon_requires_geojson()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/properties/geography', 'POST', [
+            'include' => 'details'
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getPropertiesByPolygon($req));
+
+        $this->assertEquals(422, $response->status());
+    }
 }

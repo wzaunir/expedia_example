@@ -118,4 +118,38 @@ class ExpediaController extends Controller
 
         return response()->json($response->json(), $response->status());
     }
+
+    /**
+     * Retrieve properties by polygon from Expedia Rapid API.
+     */
+    public function getPropertiesByPolygon(Request $request)
+    {
+        $validator = Validator::make(array_merge($request->all(), [
+            'geojson' => $request->getContent(),
+        ]), [
+            'geojson' => 'required|string',
+            'include' => 'nullable|string',
+            'supply_source' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $validated = $validator->validated();
+        $geojson = $validated['geojson'];
+        $params = array_intersect_key($validated, array_flip(['include', 'supply_source']));
+
+        $url = 'https://test.expediapartnercentral.com/rapid/properties/geography';
+        if (!empty($params)) {
+            $url .= '?' . http_build_query($params);
+        }
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->withBody($geojson, 'application/json')->post($url);
+
+        return response()->json($response->json(), $response->status());
+    }
 }
