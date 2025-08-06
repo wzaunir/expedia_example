@@ -122,4 +122,55 @@ class ExpediaControllerTest extends TestCase
 
         $this->assertEquals(422, $response->status());
     }
+
+    public function test_get_availability_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/properties/availability*' => Http::response([
+                'property_id' => '123',
+                'available' => true
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/properties/availability', 'GET', [
+            'property_id' => '123',
+            'checkin' => '2024-09-01',
+            'checkout' => '2024-09-05',
+            'occupancy' => '2',
+            'language' => 'en-US',
+            'currency' => 'USD',
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getAvailability($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertTrue($response->getData(true)['available']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/availability'
+                && $request['property_id'] === '123'
+                && $request['checkin'] === '2024-09-01'
+                && $request['checkout'] === '2024-09-05'
+                && $request['occupancy'] === '2'
+                && $request['language'] === 'en-US'
+                && $request['currency'] === 'USD';
+        });
+    }
+
+    public function test_get_availability_requires_parameters()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/properties/availability', 'GET');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getAvailability($req));
+
+        $this->assertEquals(422, $response->status());
+    }
 }
