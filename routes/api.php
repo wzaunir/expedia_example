@@ -14,7 +14,7 @@ Route::middleware([ApiTokenMiddleware::class])->group(function () {
     Route::get('/expedia/properties/inactive', [ExpediaController::class, 'getInactiveProperties']);
     Route::post('/expedia/properties/geography', [ExpediaController::class, 'getPropertiesByPolygon']);
 
-
+    Route::get('/expedia/files/property-content', [ExpediaController::class, 'downloadPropertyContent']);
     Route::get('/expedia/files/properties/catalog', [ExpediaController::class, 'downloadPropertyCatalog']);
 
 });

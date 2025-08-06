@@ -271,6 +271,51 @@ class ExpediaControllerTest extends TestCase
 
     }
 
+    public function test_download_property_content_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/files/properties/content*' => Http::response([
+                'content_url' => 'https://example.com/file.zip'
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/files/property-content', 'GET', [
+            'language' => 'en-US',
+            'supply_source' => 'expedia'
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->downloadPropertyContent($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('https://example.com/file.zip', $response->getData(true)['content_url']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/files/properties/content'
+                && $request['language'] === 'en-US'
+                && $request['supply_source'] === 'expedia'
+                && isset($request['signature'])
+                && isset($request['timestamp'])
+                && isset($request['key']);
+        });
+    }
+
+    public function test_download_property_content_requires_parameters()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/files/property-content', 'GET');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->downloadPropertyContent($req));
+
+        $this->assertEquals(422, $response->status());
+    }
+
     public function test_download_property_catalog_returns_response()
     {
         Http::fake([
