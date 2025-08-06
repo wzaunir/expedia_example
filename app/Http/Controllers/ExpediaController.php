@@ -120,35 +120,32 @@ class ExpediaController extends Controller
     }
 
     /**
-     * Retrieve properties by polygon from Expedia Rapid API.
+
+     * Retrieve inactive properties from Expedia Rapid API.
      */
-    public function getPropertiesByPolygon(Request $request)
+    public function getInactiveProperties(Request $request)
     {
-        $validator = Validator::make(array_merge($request->all(), [
-            'geojson' => $request->getContent(),
-        ]), [
-            'geojson' => 'required|string',
-            'include' => 'nullable|string',
-            'supply_source' => 'nullable|string',
+        $validator = Validator::make($request->all(), [
+            'since' => 'required|date_format:Y-m-d',
+            'page' => 'nullable|integer',
+            'limit' => 'nullable|integer',
+
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $validated = $validator->validated();
-        $geojson = $validated['geojson'];
-        $params = array_intersect_key($validated, array_flip(['include', 'supply_source']));
 
-        $url = 'https://test.expediapartnercentral.com/rapid/properties/geography';
-        if (!empty($params)) {
-            $url .= '?' . http_build_query($params);
-        }
+        $params = $validator->validated();
+
 
         $response = Http::withHeaders([
             'Accept' => 'application/json',
             'Authorization' => 'Bearer ' . config('services.expedia.key'),
-        ])->withBody($geojson, 'application/json')->post($url);
+
+        ])->get('https://test.expediapartnercentral.com/rapid/properties/inactive', $params);
+
 
         return response()->json($response->json(), $response->status());
     }
