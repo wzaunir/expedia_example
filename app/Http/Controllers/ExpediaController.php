@@ -92,6 +92,34 @@ class ExpediaController extends Controller
     }
 
     /**
+     * Download property content file from Expedia.
+     */
+    public function downloadPropertyContent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'language' => 'required|string',
+            'supply_source' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+        $signed = $this->signRequest();
+
+        $params['key'] = config('services.expedia.key');
+        $params['signature'] = $signed['signature'];
+        $params['timestamp'] = $signed['timestamp'];
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+        ])->get('https://test.expediapartnercentral.com/files/properties/content', $params);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
      * Retrieve property availability from Expedia Rapid API.
      */
     public function getAvailability(Request $request)
