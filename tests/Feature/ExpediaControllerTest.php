@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class ExpediaControllerTest extends TestCase
 {
-    public function test_search_hotels_returns_response()
+    public function test_search_hotels_success()
     {
         Http::fake(function ($request) {
             return Http::response([
@@ -31,6 +31,10 @@ class ExpediaControllerTest extends TestCase
         $controller = new ExpediaController();
         $middleware = new ApiTokenMiddleware();
         $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
+
+        Http::assertSent(function ($request) {
+            return $request->hasHeader('Authorization', 'Bearer demo-key');
+        });
 
         $this->assertEquals(200, $response->status());
         $this->assertNotEmpty($response->getData(true)['hotels']);
@@ -174,6 +178,7 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
     }
 
+
     public function test_get_inactive_properties_returns_response()
     {
         Http::fake([
@@ -211,12 +216,15 @@ class ExpediaControllerTest extends TestCase
         Http::fake();
 
         $request = Request::create('/api/expedia/properties/inactive', 'GET');
+
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
         $middleware = new ApiTokenMiddleware();
+
         $response = $middleware->handle($request, fn($req) => $controller->getInactiveProperties($req));
 
         $this->assertEquals(422, $response->status());
+
     }
 }
