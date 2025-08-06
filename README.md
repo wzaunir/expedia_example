@@ -5,6 +5,7 @@ This project provides a minimal Laravel-style API for integrating with the Exped
 ## Endpoints
 
 - `GET /api/expedia/hotels?cityId=1506246&checkin=2024-09-01&checkout=2024-09-05&room1=2` – Fetches hotel data from Expedia.
+- `GET /api/expedia/calendars/availability?property_id=123&start_date=2024-09-01&end_date=2024-09-30` – Retrieves an availability calendar for a property.
 
 Requests must include the header `X-API-TOKEN` with the value defined in `.env` as `API_TOKEN`.
 
