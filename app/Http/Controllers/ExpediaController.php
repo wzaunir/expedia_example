@@ -92,6 +92,35 @@ class ExpediaController extends Controller
     }
 
     /**
+     * Retrieve guest reviews for a property from Expedia Rapid API.
+     */
+    public function getGuestReviews(Request $request, string $property_id)
+    {
+        $validator = Validator::make(
+            array_merge($request->only('language'), ['property_id' => $property_id]),
+            [
+                'property_id' => 'required|integer',
+                'language' => 'nullable|string',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+        $id = $params['property_id'];
+        unset($params['property_id']);
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get("https://test.expediapartnercentral.com/rapid/properties/{$id}/guest-reviews", $params);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
      * Retrieve property availability from Expedia Rapid API.
      */
     public function getAvailability(Request $request)
