@@ -131,14 +131,14 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake([
             'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews*' => Http::response([
-                'property_id' => '123',
-                'reviews' => [],
-            ], 200),
+                'reviews' => [
+                    ['id' => '1', 'comment' => 'Great stay']
+                ]
+            ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/properties/123/guest-reviews', 'GET', [
-            'language' => 'en-US',
-        ]);
+        $request = Request::create('/api/expedia/properties/123/guest-reviews', 'GET', ['language' => 'en-US']);
+
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -146,7 +146,9 @@ class ExpediaControllerTest extends TestCase
         $response = $middleware->handle($request, fn($req) => $controller->getGuestReviews($req, '123'));
 
         $this->assertEquals(200, $response->status());
-        $this->assertEquals('123', $response->getData(true)['property_id']);
+
+        $this->assertEquals('Great stay', $response->getData(true)['reviews'][0]['comment']);
+
 
         Http::assertSent(function ($request) {
             return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews'
@@ -268,4 +270,34 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
 
     }
+
+    public function test_download_property_catalog_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/files/properties/catalog*' => Http::response([
+                'catalog' => 'data'
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/files/properties/catalog', 'GET', [
+            'language' => 'en-US',
+            'supply_source' => 'expedia'
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->downloadPropertyCatalog($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('data', $response->getData(true)['catalog']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/files/properties/catalog'
+                && $request['language'] === 'en-US'
+                && $request['supply_source'] === 'expedia';
+        });
+
+    }
 }
+

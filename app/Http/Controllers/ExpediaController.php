@@ -150,6 +150,41 @@ class ExpediaController extends Controller
 
     /**
 
+     * Retrieve properties by polygon from Expedia Rapid API.
+     */
+    public function getPropertiesByPolygon(Request $request)
+    {
+        $validator = Validator::make(array_merge($request->all(), [
+            'geojson' => $request->getContent(),
+        ]), [
+            'geojson' => 'required|string',
+            'include' => 'nullable|string',
+            'supply_source' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $validated = $validator->validated();
+        $geojson = $validated['geojson'];
+        $params = array_intersect_key($validated, array_flip(['include', 'supply_source']));
+
+        $url = 'https://test.expediapartnercentral.com/rapid/properties/geography';
+        if (!empty($params)) {
+            $url .= '?' . http_build_query($params);
+        }
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->withBody($geojson, 'application/json')->post($url);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
+
      * Retrieve inactive properties from Expedia Rapid API.
      */
     public function getInactiveProperties(Request $request)
@@ -168,14 +203,39 @@ class ExpediaController extends Controller
 
         $params = $validator->validated();
 
-
         $response = Http::withHeaders([
             'Accept' => 'application/json',
             'Authorization' => 'Bearer ' . config('services.expedia.key'),
-
         ])->get('https://test.expediapartnercentral.com/rapid/properties/inactive', $params);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
+     * Download property catalog from Expedia API.
+     */
+    public function downloadPropertyCatalog(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'language' => 'nullable|string',
+            'supply_source' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+        $params = array_merge($params, [
+            'key' => config('services.expedia.key'),
+        ], $this->signRequest());
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+        ])->get('https://test.expediapartnercentral.com/files/properties/catalog', $params);
 
 
         return response()->json($response->json(), $response->status());
     }
 }
+
