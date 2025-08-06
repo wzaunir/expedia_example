@@ -147,6 +147,7 @@ class ExpediaController extends Controller
     }
 
     /**
+
      * Retrieve property availability from Expedia Rapid API.
      */
     public function getAvailability(Request $request)
