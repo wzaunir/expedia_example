@@ -12,15 +12,20 @@ class ExpediaControllerTest extends TestCase
 {
     public function test_search_hotels_returns_response()
     {
-        Http::fake([
-            'https://test.expediapartnercentral.com/rapid/hotels*' => Http::response([
+        Http::fake(function ($request) {
+            return Http::response([
                 'hotels' => [
                     ['id' => '1', 'name' => 'Demo Hotel']
                 ]
-            ], 200)
-        ]);
+            ], 200);
+        });
 
-        $request = Request::create('/api/expedia/hotels', 'GET', ['cityId' => '1506246']);
+        $request = Request::create('/api/expedia/hotels', 'GET', [
+            'cityId' => '1506246',
+            'checkin' => '2024-09-01',
+            'checkout' => '2024-09-05',
+            'room1' => '2',
+        ]);
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -29,6 +34,28 @@ class ExpediaControllerTest extends TestCase
 
         $this->assertEquals(200, $response->status());
         $this->assertNotEmpty($response->getData(true)['hotels']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/hotels'
+                && $request['cityId'] === '1506246'
+                && $request['checkin'] === '2024-09-01'
+                && $request['checkout'] === '2024-09-05'
+                && $request['room1'] === '2';
+        });
+    }
+
+    public function test_search_hotels_requires_parameters()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/hotels', 'GET');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
+
+        $this->assertEquals(422, $response->status());
     }
 
     public function test_get_region_returns_response()

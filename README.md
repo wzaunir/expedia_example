@@ -4,9 +4,18 @@ This project provides a minimal Laravel-style API for integrating with the Exped
 
 ## Endpoints
 
-- `GET /api/expedia/hotels?cityId=1506246` – Fetches hotel data from Expedia.
+- `GET /api/expedia/hotels?cityId=1506246&checkin=2024-09-01&checkout=2024-09-05&room1=2` – Fetches hotel data from Expedia.
 
 Requests must include the header `X-API-TOKEN` with the value defined in `.env` as `API_TOKEN`.
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `cityId`  | int  | Expedia city identifier. |
+| `checkin` | date (`YYYY-MM-DD`) | Check-in date. |
+| `checkout` | date (`YYYY-MM-DD`) | Check-out date, must be after `checkin`. |
+| `room1` | string | Room occupancy description, e.g. `2` for two adults. |
 
 ## Tests
 
