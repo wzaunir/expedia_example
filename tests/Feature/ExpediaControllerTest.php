@@ -62,24 +62,46 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
     }
 
-    public function test_get_region_returns_response()
+
+    public function test_search_hotels_handles_api_error()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/regions/*' => Http::response([
-                'id' => '1',
-                'name' => 'Demo Region'
-            ], 200)
+            'https://test.expediapartnercentral.com/rapid/hotels*' => Http::response([], 500),
         ]);
 
-        $request = Request::create('/api/expedia/region/1', 'GET', ['language' => 'en-US', 'include' => 'details']);
+        $request = Request::create('/api/expedia/hotels', 'GET', ['cityId' => '1506246']);
+
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
         $middleware = new ApiTokenMiddleware();
-        $response = $middleware->handle($request, fn($req) => $controller->getRegion($req, '1'));
 
-        $this->assertEquals(200, $response->status());
-        $this->assertEquals('Demo Region', $response->getData(true)['name']);
+        $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
+
+        $this->assertEquals(500, $response->status());
+        $data = $response->getData(true);
+        $this->assertEquals(500, $data['status']);
+        $this->assertArrayHasKey('message', $data);
+    }
+
+    public function test_search_hotels_handles_network_exception()
+    {
+        Http::fake(function ($request) {
+            throw new \Exception('Network error');
+        });
+
+        $request = Request::create('/api/expedia/hotels', 'GET', ['cityId' => '1506246']);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
+
+        $this->assertEquals(500, $response->status());
+        $data = $response->getData(true);
+        $this->assertEquals(500, $data['status']);
+        $this->assertArrayHasKey('message', $data);
+
     }
 
     public function test_get_property_content_returns_response()
