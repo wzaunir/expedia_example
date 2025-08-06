@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+
 use Illuminate\Support\Facades\Log;
 
 class ExpediaController extends Controller
@@ -30,6 +31,7 @@ class ExpediaController extends Controller
      */
     public function searchHotels(Request $request)
     {
+
 
         try {
 
@@ -77,6 +79,59 @@ class ExpediaController extends Controller
             'Accept' => 'application/json',
             'Authorization' => 'Bearer ' . config('services.expedia.key'),
         ])->get("https://test.expediapartnercentral.com/rapid/regions/{$region_id}", $params);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
+     * Retrieve property content from Expedia Rapid API.
+     */
+    public function getPropertyContent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'property_id' => 'required|integer',
+            'language' => 'nullable|string',
+            'include' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get('https://test.expediapartnercentral.com/rapid/properties/content', $params);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
+     * Retrieve property availability from Expedia Rapid API.
+     */
+    public function getAvailability(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'property_id' => 'required|integer',
+            'checkin' => 'required|date_format:Y-m-d',
+            'checkout' => 'required|date_format:Y-m-d|after:checkin',
+            'occupancy' => 'required|string',
+            'language' => 'nullable|string',
+            'currency' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get('https://test.expediapartnercentral.com/rapid/properties/availability', $params);
 
         return response()->json($response->json(), $response->status());
     }
