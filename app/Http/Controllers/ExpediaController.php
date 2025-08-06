@@ -90,4 +90,32 @@ class ExpediaController extends Controller
 
         return response()->json($response->json(), $response->status());
     }
+
+    /**
+     * Retrieve property availability from Expedia Rapid API.
+     */
+    public function getAvailability(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'property_id' => 'required|integer',
+            'checkin' => 'required|date_format:Y-m-d',
+            'checkout' => 'required|date_format:Y-m-d|after:checkin',
+            'occupancy' => 'required|string',
+            'language' => 'nullable|string',
+            'currency' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get('https://test.expediapartnercentral.com/rapid/properties/availability', $params);
+
+        return response()->json($response->json(), $response->status());
+    }
 }
