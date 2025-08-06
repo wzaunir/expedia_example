@@ -178,26 +178,57 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
     }
 
-    public function test_search_hotels_with_invalid_city_returns_error()
+
+    public function test_get_properties_by_polygon_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/hotels*' => Http::response([
-                'message' => 'Invalid cityId',
-            ], 422)
+            'https://test.expediapartnercentral.com/rapid/properties/geography*' => Http::response([
+                'properties' => [
+                    ['id' => '1', 'name' => 'Demo Property']
+                ]
+            ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/hotels', 'GET', ['cityId' => 'invalid']);
+        $geoJson = json_encode([
+            'type' => 'Polygon',
+            'coordinates' => [[[0,0], [0,1], [1,1], [1,0], [0,0]]]
+        ]);
+
+        $request = Request::create('/api/expedia/properties/geography', 'POST', [
+            'include' => 'details',
+            'supply_source' => 'expedia',
+        ], [], [], [], $geoJson);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+        $request->headers->set('Content-Type', 'application/json');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getPropertiesByPolygon($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('Demo Property', $response->getData(true)['properties'][0]['name']);
+
+        Http::assertSent(function ($request) use ($geoJson) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/geography?include=details&supply_source=expedia'
+                && $request->body() === $geoJson
+                && $request->method() === 'POST';
+        });
+    }
+
+    public function test_get_properties_by_polygon_requires_geojson()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/properties/geography', 'POST', [
+            'include' => 'details'
+        ]);
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
         $middleware = new ApiTokenMiddleware();
-        $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
-
-        Http::assertSent(function ($request) {
-            return $request->hasHeader('Authorization', 'Bearer demo-key');
-        });
+        $response = $middleware->handle($request, fn($req) => $controller->getPropertiesByPolygon($req));
 
         $this->assertEquals(422, $response->status());
-        $this->assertEquals('Invalid cityId', $response->getData(true)['message']);
+
     }
 }

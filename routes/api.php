@@ -9,4 +9,5 @@ Route::middleware([ApiTokenMiddleware::class])->group(function () {
     Route::get('/expedia/region/{region_id}', [ExpediaController::class, 'getRegion']);
     Route::get('/expedia/property-content', [ExpediaController::class, 'getPropertyContent']);
     Route::get('/expedia/properties/availability', [ExpediaController::class, 'getAvailability']);
+    Route::post('/expedia/properties/geography', [ExpediaController::class, 'getPropertiesByPolygon']);
 });
