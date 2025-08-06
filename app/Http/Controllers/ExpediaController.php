@@ -29,7 +29,7 @@ class ExpediaController extends Controller
      * Retrieve hotels from Expedia Rapid API.
      */
     public function searchHotels(Request $request)
-
+    {
         $validator = Validator::make($request->all(), [
             'cityId' => 'required|integer',
             'checkin' => 'required|date_format:Y-m-d',
@@ -62,6 +62,31 @@ class ExpediaController extends Controller
             'Accept' => 'application/json',
             'Authorization' => 'Bearer ' . config('services.expedia.key'),
         ])->get("https://test.expediapartnercentral.com/rapid/regions/{$region_id}", $params);
+
+        return response()->json($response->json(), $response->status());
+    }
+
+    /**
+     * Retrieve property content from Expedia Rapid API.
+     */
+    public function getPropertyContent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'property_id' => 'required|integer',
+            'language' => 'nullable|string',
+            'include' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get('https://test.expediapartnercentral.com/rapid/properties/content', $params);
 
         return response()->json($response->json(), $response->status());
     }
