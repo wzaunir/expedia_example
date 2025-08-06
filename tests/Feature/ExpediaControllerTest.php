@@ -31,6 +31,7 @@ class ExpediaControllerTest extends TestCase
         $this->assertNotEmpty($response->getData(true)['hotels']);
     }
 
+
     public function test_search_hotels_handles_api_error()
     {
         Http::fake([
@@ -38,10 +39,12 @@ class ExpediaControllerTest extends TestCase
         ]);
 
         $request = Request::create('/api/expedia/hotels', 'GET', ['cityId' => '1506246']);
+
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
         $middleware = new ApiTokenMiddleware();
+
         $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
 
         $this->assertEquals(500, $response->status());
@@ -67,5 +70,6 @@ class ExpediaControllerTest extends TestCase
         $data = $response->getData(true);
         $this->assertEquals(500, $data['status']);
         $this->assertArrayHasKey('message', $data);
+
     }
 }
