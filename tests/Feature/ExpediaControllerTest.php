@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class ExpediaControllerTest extends TestCase
 {
-    public function test_search_hotels_returns_response()
+    public function test_search_hotels_success()
     {
         Http::fake(function ($request) {
             return Http::response([
@@ -31,6 +31,10 @@ class ExpediaControllerTest extends TestCase
         $controller = new ExpediaController();
         $middleware = new ApiTokenMiddleware();
         $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
+
+        Http::assertSent(function ($request) {
+            return $request->hasHeader('Authorization', 'Bearer demo-key');
+        });
 
         $this->assertEquals(200, $response->status());
         $this->assertNotEmpty($response->getData(true)['hotels']);
@@ -123,6 +127,46 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
     }
 
+    public function test_get_guest_reviews_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews*' => Http::response([
+                'reviews' => [
+                    ['id' => '1', 'comment' => 'Great stay']
+                ]
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/properties/123/guest-reviews', 'GET', ['language' => 'en-US']);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getGuestReviews($req, '123'));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('Great stay', $response->getData(true)['reviews'][0]['comment']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews'
+                && $request['language'] === 'en-US';
+        });
+    }
+
+    public function test_get_guest_reviews_validates_property_id()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/properties/abc/guest-reviews', 'GET');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getGuestReviews($req, 'abc'));
+
+        $this->assertEquals(422, $response->status());
+    }
+
     public function test_get_availability_returns_response()
     {
         Http::fake([
@@ -174,6 +218,54 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
     }
 
+    public function test_get_inactive_properties_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/properties/inactive*' => Http::response([
+                'properties' => [
+                    ['id' => '1']
+                ]
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/properties/inactive', 'GET', [
+            'since' => '2024-09-01',
+            'page' => '1',
+            'limit' => '10',
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getInactiveProperties($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertNotEmpty($response->getData(true)['properties']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/inactive'
+                && $request['since'] === '2024-09-01'
+                && $request['page'] === '1'
+                && $request['limit'] === '10';
+        });
+    }
+
+    public function test_get_inactive_properties_requires_since()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/properties/inactive', 'GET');
+
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+
+        $response = $middleware->handle($request, fn($req) => $controller->getInactiveProperties($req));
+
+        $this->assertEquals(422, $response->status());
+    }
+
     public function test_download_property_catalog_returns_response()
     {
         Http::fake([
@@ -202,3 +294,4 @@ class ExpediaControllerTest extends TestCase
         });
     }
 }
+
