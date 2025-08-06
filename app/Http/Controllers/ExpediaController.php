@@ -118,4 +118,30 @@ class ExpediaController extends Controller
 
         return response()->json($response->json(), $response->status());
     }
+
+    /**
+     * Download property catalog from Expedia API.
+     */
+    public function downloadPropertyCatalog(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'language' => 'nullable|string',
+            'supply_source' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = $validator->validated();
+        $params = array_merge($params, [
+            'key' => config('services.expedia.key'),
+        ], $this->signRequest());
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+        ])->get('https://test.expediapartnercentral.com/files/properties/catalog', $params);
+
+        return response()->json($response->json(), $response->status());
+    }
 }

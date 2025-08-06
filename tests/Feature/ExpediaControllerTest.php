@@ -173,4 +173,32 @@ class ExpediaControllerTest extends TestCase
 
         $this->assertEquals(422, $response->status());
     }
+
+    public function test_download_property_catalog_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/files/properties/catalog*' => Http::response([
+                'catalog' => 'data'
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/files/properties/catalog', 'GET', [
+            'language' => 'en-US',
+            'supply_source' => 'expedia'
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->downloadPropertyCatalog($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('data', $response->getData(true)['catalog']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/files/properties/catalog'
+                && $request['language'] === 'en-US'
+                && $request['supply_source'] === 'expedia';
+        });
+    }
 }
