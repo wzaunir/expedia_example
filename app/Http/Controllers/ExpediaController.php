@@ -118,4 +118,32 @@ class ExpediaController extends Controller
 
         return response()->json($response->json(), $response->status());
     }
+
+    /**
+     * Retrieve availability calendar from Expedia Rapid API.
+     */
+    public function getAvailabilityCalendar(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'property_id' => 'required|integer',
+            'start_date' => 'required|date_format:Y-m-d',
+            'end_date' => 'required|date_format:Y-m-d|after:start_date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $params = array_merge(
+            $validator->validated(),
+            $request->except(['property_id', 'start_date', 'end_date'])
+        );
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . config('services.expedia.key'),
+        ])->get('https://test.expediapartnercentral.com/rapid/calendars/availability', $params);
+
+        return response()->json($response->json(), $response->status());
+    }
 }

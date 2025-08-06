@@ -173,4 +173,51 @@ class ExpediaControllerTest extends TestCase
 
         $this->assertEquals(422, $response->status());
     }
+
+    public function test_get_availability_calendar_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/calendars/availability*' => Http::response([
+                'property_id' => '123',
+                'available' => true
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/calendars/availability', 'GET', [
+            'property_id' => '123',
+            'start_date' => '2024-09-01',
+            'end_date' => '2024-09-30',
+            'room_type_id' => '456',
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getAvailabilityCalendar($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertTrue($response->getData(true)['available']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/calendars/availability'
+                && $request['property_id'] === '123'
+                && $request['start_date'] === '2024-09-01'
+                && $request['end_date'] === '2024-09-30'
+                && $request['room_type_id'] === '456';
+        });
+    }
+
+    public function test_get_availability_calendar_requires_parameters()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/calendars/availability', 'GET');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getAvailabilityCalendar($req));
+
+        $this->assertEquals(422, $response->status());
+    }
 }
