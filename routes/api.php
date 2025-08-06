@@ -6,4 +6,5 @@ use App\Http\Middleware\ApiTokenMiddleware;
 
 Route::middleware([ApiTokenMiddleware::class])->group(function () {
     Route::get('/expedia/hotels', [ExpediaController::class, 'searchHotels']);
+    Route::get('/expedia/region/{region_id}', [ExpediaController::class, 'getRegion']);
 });
