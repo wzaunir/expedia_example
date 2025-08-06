@@ -123,6 +123,47 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
     }
 
+    public function test_get_guest_reviews_returns_response()
+    {
+        Http::fake([
+            'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews*' => Http::response([
+                'property_id' => '123',
+                'reviews' => [],
+            ], 200),
+        ]);
+
+        $request = Request::create('/api/expedia/properties/123/guest-reviews', 'GET', [
+            'language' => 'en-US',
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getGuestReviews($req, '123'));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('123', $response->getData(true)['property_id']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews'
+                && $request['language'] === 'en-US';
+        });
+    }
+
+    public function test_get_guest_reviews_validates_property_id()
+    {
+        Http::fake();
+
+        $request = Request::create('/api/expedia/properties/abc/guest-reviews', 'GET');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getGuestReviews($req, 'abc'));
+
+        $this->assertEquals(422, $response->status());
+    }
+
     public function test_get_availability_returns_response()
     {
         Http::fake([
