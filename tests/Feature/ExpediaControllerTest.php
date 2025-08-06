@@ -138,6 +138,7 @@ class ExpediaControllerTest extends TestCase
         ]);
 
         $request = Request::create('/api/expedia/properties/123/guest-reviews', 'GET', ['language' => 'en-US']);
+
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -145,7 +146,9 @@ class ExpediaControllerTest extends TestCase
         $response = $middleware->handle($request, fn($req) => $controller->getGuestReviews($req, '123'));
 
         $this->assertEquals(200, $response->status());
+
         $this->assertEquals('Great stay', $response->getData(true)['reviews'][0]['comment']);
+
 
         Http::assertSent(function ($request) {
             return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews'
@@ -218,6 +221,7 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals(422, $response->status());
     }
 
+
     public function test_get_inactive_properties_returns_response()
     {
         Http::fake([
@@ -264,6 +268,7 @@ class ExpediaControllerTest extends TestCase
         $response = $middleware->handle($request, fn($req) => $controller->getInactiveProperties($req));
 
         $this->assertEquals(422, $response->status());
+
     }
 
     public function test_download_property_catalog_returns_response()
@@ -292,6 +297,7 @@ class ExpediaControllerTest extends TestCase
                 && $request['language'] === 'en-US'
                 && $request['supply_source'] === 'expedia';
         });
+
     }
 }
 

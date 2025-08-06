@@ -149,6 +149,7 @@ class ExpediaController extends Controller
     }
 
     /**
+
      * Retrieve properties by polygon from Expedia Rapid API.
      */
     public function getPropertiesByPolygon(Request $request)
@@ -183,6 +184,7 @@ class ExpediaController extends Controller
     }
 
     /**
+
      * Retrieve inactive properties from Expedia Rapid API.
      */
     public function getInactiveProperties(Request $request)
@@ -191,11 +193,13 @@ class ExpediaController extends Controller
             'since' => 'required|date_format:Y-m-d',
             'page' => 'nullable|integer',
             'limit' => 'nullable|integer',
+
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
+
 
         $params = $validator->validated();
 
@@ -229,6 +233,7 @@ class ExpediaController extends Controller
         $response = Http::withHeaders([
             'Accept' => 'application/json',
         ])->get('https://test.expediapartnercentral.com/files/properties/catalog', $params);
+
 
         return response()->json($response->json(), $response->status());
     }
