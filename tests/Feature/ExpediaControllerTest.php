@@ -4,6 +4,14 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\ExpediaController;
 use App\Http\Middleware\ApiTokenMiddleware;
+use App\Http\Requests\SearchHotelsRequest;
+use App\Http\Requests\ChainsRequest;
+use App\Http\Requests\PropertyContentRequest;
+use App\Http\Requests\GuestReviewsRequest;
+use App\Http\Requests\AvailabilityRequest;
+use App\Http\Requests\InactivePropertiesRequest;
+use App\Http\Requests\DownloadPropertyContentRequest;
+use App\Http\Requests\DownloadPropertyCatalogRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +28,7 @@ class ExpediaControllerTest extends TestCase
             ], 200);
         });
 
-        $request = Request::create('/api/expedia/hotels', 'GET', [
+        $request = SearchHotelsRequest::create('/api/expedia/hotels', 'GET', [
             'cityId' => '1506246',
             'checkin' => '2024-09-01',
             'checkout' => '2024-09-05',
@@ -52,7 +60,7 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake();
 
-        $request = Request::create('/api/expedia/hotels', 'GET');
+        $request = SearchHotelsRequest::create('/api/expedia/hotels', 'GET');
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -73,7 +81,7 @@ class ExpediaControllerTest extends TestCase
             ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/chains', 'GET', [
+        $request = ChainsRequest::create('/api/expedia/chains', 'GET', [
             'limit' => '10',
             'token' => 'prev'
         ]);
@@ -97,7 +105,7 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake();
 
-        $request = Request::create('/api/expedia/chains', 'GET', [
+        $request = ChainsRequest::create('/api/expedia/chains', 'GET', [
             'limit' => 'abc'
         ]);
         $request->headers->set('X-API-TOKEN', 'secret-token');
@@ -138,7 +146,7 @@ class ExpediaControllerTest extends TestCase
             ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/property-content', 'GET', [
+        $request = PropertyContentRequest::create('/api/expedia/property-content', 'GET', [
             'property_id' => '123',
             'language' => 'en-US',
             'include' => 'details'
@@ -164,7 +172,7 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake();
 
-        $request = Request::create('/api/expedia/property-content', 'GET');
+        $request = PropertyContentRequest::create('/api/expedia/property-content', 'GET');
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -184,7 +192,7 @@ class ExpediaControllerTest extends TestCase
             ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/properties/123/guest-reviews', 'GET', ['language' => 'en-US']);
+        $request = GuestReviewsRequest::create('/api/expedia/properties/123/guest-reviews', 'GET', ['language' => 'en-US']);
 
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
@@ -207,7 +215,7 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake();
 
-        $request = Request::create('/api/expedia/properties/abc/guest-reviews', 'GET');
+        $request = GuestReviewsRequest::create('/api/expedia/properties/abc/guest-reviews', 'GET');
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -226,7 +234,7 @@ class ExpediaControllerTest extends TestCase
             ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/properties/availability', 'GET', [
+        $request = AvailabilityRequest::create('/api/expedia/properties/availability', 'GET', [
             'property_id' => '123',
             'checkin' => '2024-09-01',
             'checkout' => '2024-09-05',
@@ -258,7 +266,7 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake();
 
-        $request = Request::create('/api/expedia/properties/availability', 'GET');
+        $request = AvailabilityRequest::create('/api/expedia/properties/availability', 'GET');
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -279,7 +287,7 @@ class ExpediaControllerTest extends TestCase
             ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/properties/inactive', 'GET', [
+        $request = InactivePropertiesRequest::create('/api/expedia/properties/inactive', 'GET', [
             'since' => '2024-09-01',
             'page' => '1',
             'limit' => '10',
@@ -305,7 +313,7 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake();
 
-        $request = Request::create('/api/expedia/properties/inactive', 'GET');
+        $request = InactivePropertiesRequest::create('/api/expedia/properties/inactive', 'GET');
 
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
@@ -326,7 +334,7 @@ class ExpediaControllerTest extends TestCase
             ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/files/property-content', 'GET', [
+        $request = DownloadPropertyContentRequest::create('/api/expedia/files/property-content', 'GET', [
             'language' => 'en-US',
             'supply_source' => 'expedia'
         ]);
@@ -353,7 +361,7 @@ class ExpediaControllerTest extends TestCase
     {
         Http::fake();
 
-        $request = Request::create('/api/expedia/files/property-content', 'GET');
+        $request = DownloadPropertyContentRequest::create('/api/expedia/files/property-content', 'GET');
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
         $controller = new ExpediaController();
@@ -371,7 +379,7 @@ class ExpediaControllerTest extends TestCase
             ], 200)
         ]);
 
-        $request = Request::create('/api/expedia/files/properties/catalog', 'GET', [
+        $request = DownloadPropertyCatalogRequest::create('/api/expedia/files/properties/catalog', 'GET', [
             'language' => 'en-US',
             'supply_source' => 'expedia'
         ]);

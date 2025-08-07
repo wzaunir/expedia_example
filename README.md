@@ -27,3 +27,13 @@ composer install
 ```
 
 Because this repository does not include vendor libraries, run `composer install` before executing tests.
+
+## Docker
+
+The project includes a simple Docker setup. Build and run the container with:
+
+```bash
+docker-compose up --build
+```
+
+The application will be available at http://localhost:8000.
