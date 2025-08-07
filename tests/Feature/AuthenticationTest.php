@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\ExpediaController;
 use App\Http\Middleware\ApiTokenMiddleware;
-use Illuminate\Http\Request;
+use App\Http\Requests\SearchHotelsRequest;
 use PHPUnit\Framework\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -13,7 +13,7 @@ class AuthenticationTest extends TestCase
     {
         $middleware = new ApiTokenMiddleware();
         $controller = new ExpediaController();
-        $request = Request::create('/api/expedia/hotels', 'GET');
+        $request = SearchHotelsRequest::create('/api/expedia/hotels', 'GET');
 
         $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
 
