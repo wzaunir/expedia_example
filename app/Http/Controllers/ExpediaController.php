@@ -11,9 +11,14 @@ use App\Http\Requests\PropertiesByPolygonRequest;
 use App\Http\Requests\InactivePropertiesRequest;
 use App\Http\Requests\DownloadPropertyContentRequest;
 use App\Http\Requests\DownloadPropertyCatalogRequest;
+use App\Http\Requests\CreateItineraryRequest;
 use App\Http\Resources\ExpediaResource;
+use GuzzleHttp\Psr7\Query;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ExpediaController extends Controller
@@ -27,12 +32,121 @@ class ExpediaController extends Controller
         $key = config('services.expedia.key');
         $secret = config('services.expedia.shared_secret');
 
+        if (!$key || !$secret) {
+            throw new \RuntimeException('Expedia API credentials are not configured.');
+        }
+
         $signature = hash('sha512', $key . $secret . $timestamp);
+        $authorization = sprintf(
+            'EAN APIKey=%s,Signature=%s,timestamp=%s',
+            $key,
+            $signature,
+            $timestamp
+        );
 
         return [
             'timestamp' => $timestamp,
             'signature' => $signature,
+            'authorization' => $authorization,
         ];
+    }
+
+    /**
+     * Build a configured HTTP client for Expedia.
+     */
+    private function expediaClient(?Request $request = null): PendingRequest
+    {
+        $signature = $this->signRequest();
+        $userAgent = config('services.expedia.user_agent', 'ExpediaLaravelDemo/1.0');
+        $sessionId = optional($request)->header('X-Customer-Session-Id')
+            ?? optional($request)->session()?->getId()
+            ?? (string) Str::uuid();
+
+        return Http::baseUrl(config('services.expedia.base_url'))
+            ->acceptJson()
+            ->withHeaders(array_filter([
+                'Accept-Encoding' => 'gzip',
+                'User-Agent' => $userAgent,
+                'Customer-Ip' => optional($request)?->ip() ?? '127.0.0.1',
+                'Customer-Session-Id' => $sessionId,
+                'Authorization' => $signature['authorization'],
+            ]));
+    }
+
+    /**
+     * Normalize Expedia query parameters and return a query string.
+     */
+    private function buildQueryString(array $params): string
+    {
+        $normalized = [];
+
+        foreach ($params as $key => $value) {
+            if (is_array($value)) {
+                $clean = array_values(array_filter($value, fn ($item) => $item !== null && $item !== ''));
+
+                if (!empty($clean)) {
+                    $normalized[$key] = $clean;
+                }
+                continue;
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $normalized[$key] = $value;
+        }
+
+        if (empty($normalized)) {
+            return '';
+        }
+
+        return Query::build($normalized);
+    }
+
+    private function getFromExpedia(?Request $request, string $path, array $params = [])
+    {
+        $client = $this->expediaClient($request);
+        $options = [];
+        $query = $this->buildQueryString($params);
+
+        if ($query !== '') {
+            $options['query'] = $query;
+        }
+
+        $response = $client->withOptions($options)->get($path);
+
+        return $this->respond($response);
+    }
+
+    private function postToExpedia(?Request $request, string $path, array $query = [], array $body = [])
+    {
+        $client = $this->expediaClient($request);
+        $options = [];
+        $queryString = $this->buildQueryString($query);
+
+        if ($queryString !== '') {
+            $options['query'] = $queryString;
+        }
+
+        $response = $client->withOptions($options)->post($path, $body);
+
+        return $this->respond($response);
+    }
+
+    private function deleteFromExpedia(?Request $request, string $path, array $params = [])
+    {
+        $client = $this->expediaClient($request);
+        $options = [];
+        $query = $this->buildQueryString($params);
+
+        if ($query !== '') {
+            $options['query'] = $query;
+        }
+
+        $response = $client->withOptions($options)->delete($path);
+
+        return $this->respond($response);
     }
 
     /**
@@ -57,12 +171,7 @@ class ExpediaController extends Controller
         $params = $request->validated();
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->get('https://test.expediapartnercentral.com/rapid/hotels', $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, '/regions', $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -77,12 +186,7 @@ class ExpediaController extends Controller
         $params = $request->validated();
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->get('https://test.expediapartnercentral.com/rapid/chains', $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, '/chains', $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -93,15 +197,10 @@ class ExpediaController extends Controller
      */
     public function getRegion(Request $request, string $region_id)
     {
-        $params = $request->only(['language', 'include']);
+        $params = $request->only(['language', 'include', 'token']);
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->get("https://test.expediapartnercentral.com/rapid/regions/{$region_id}", $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, "/regions/{$region_id}", $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -116,12 +215,7 @@ class ExpediaController extends Controller
         $params = $request->validated();
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->get('https://test.expediapartnercentral.com/rapid/properties/content', $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, '/properties/content', $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -134,17 +228,11 @@ class ExpediaController extends Controller
     {
         $request->merge(['property_id' => $property_id]);
         $request->validateResolved();
-        $params = $request->validated();
-        $id = $params['property_id'];
-        unset($params['property_id']);
+        $params = Arr::except($request->validated(), ['property_id']);
+        $id = $property_id;
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->get("https://test.expediapartnercentral.com/rapid/properties/{$id}/guest-reviews", $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, "/properties/{$id}/guest-reviews", $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -159,12 +247,7 @@ class ExpediaController extends Controller
         $params = $request->validated();
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->get('https://test.expediapartnercentral.com/rapid/properties/availability', $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, '/properties/availability', $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -177,21 +260,11 @@ class ExpediaController extends Controller
     {
         $request->validateResolved();
         $validated = $request->validated();
-        $geojson = $validated['geojson'];
-        $params = array_intersect_key($validated, array_flip(['include', 'supply_source']));
-
-        $url = 'https://test.expediapartnercentral.com/rapid/properties/geography';
-        if (!empty($params)) {
-            $url .= '?' . http_build_query($params);
-        }
+        $query = Arr::only($validated, ['include', 'supply_source', 'billing_terms', 'partner_point_of_sale', 'payment_terms', 'platform_name']);
+        $body = $validated['geojson'];
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->withBody($geojson, 'application/json')->post($url);
-
-            return $this->respond($response);
+            return $this->postToExpedia($request, '/properties/geography', $query, $body);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -206,12 +279,7 @@ class ExpediaController extends Controller
         $params = $request->validated();
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.expedia.key'),
-            ])->get('https://test.expediapartnercentral.com/rapid/properties/inactive', $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, '/properties/inactive', $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -223,16 +291,10 @@ class ExpediaController extends Controller
     public function downloadPropertyContent(DownloadPropertyContentRequest $request)
     {
         $request->validateResolved();
-        $params = array_merge($request->validated(), [
-            'key' => config('services.expedia.key'),
-        ], $this->signRequest());
+        $params = $request->validated();
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-            ])->get('https://test.expediapartnercentral.com/files/properties/content', $params);
-
-            return $this->respond($response);
+            return $this->getFromExpedia($request, '/files/properties/content', $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -244,16 +306,53 @@ class ExpediaController extends Controller
     public function downloadPropertyCatalog(DownloadPropertyCatalogRequest $request)
     {
         $request->validateResolved();
-        $params = array_merge($request->validated(), [
-            'key' => config('services.expedia.key'),
-        ], $this->signRequest());
+        $params = $request->validated();
 
         try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-            ])->get('https://test.expediapartnercentral.com/files/properties/catalog', $params);
+            return $this->getFromExpedia($request, '/files/properties/catalog', $params);
+        } catch (Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 
-            return $this->respond($response);
+    /**
+     * Create an itinerary (booking) with Expedia Rapid API.
+     */
+    public function createItinerary(CreateItineraryRequest $request)
+    {
+        $request->validateResolved();
+        $payload = $request->validated();
+
+        try {
+            return $this->postToExpedia($request, '/itineraries', [], $payload);
+        } catch (Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Retrieve itinerary details.
+     */
+    public function getItinerary(Request $request, string $itinerary_id)
+    {
+        $params = $request->only(['language', 'currency']);
+
+        try {
+            return $this->getFromExpedia($request, "/itineraries/{$itinerary_id}", $params);
+        } catch (Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Cancel an itinerary.
+     */
+    public function cancelItinerary(Request $request, string $itinerary_id)
+    {
+        $params = $request->only(['language']);
+
+        try {
+            return $this->deleteFromExpedia($request, "/itineraries/{$itinerary_id}", $params);
         } catch (Throwable $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

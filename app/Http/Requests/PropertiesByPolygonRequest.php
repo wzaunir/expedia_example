@@ -13,17 +13,27 @@ class PropertiesByPolygonRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'geojson' => $this->getContent(),
-        ]);
+        $geojson = $this->json()->all();
+
+        if (!empty($geojson)) {
+            $this->merge(['geojson' => $geojson]);
+        }
+
+        if (!$this->has('include')) {
+            $this->merge(['include' => 'property_ids']);
+        }
+
+        if (!$this->has('supply_source')) {
+            $this->merge(['supply_source' => 'expedia']);
+        }
     }
 
     public function rules(): array
     {
         return [
-            'geojson' => ['required', 'string'],
-            'include' => ['nullable', 'string'],
-            'supply_source' => ['nullable', 'string'],
+            'geojson' => ['required', 'array'],
+            'include' => ['required', 'in:property_ids'],
+            'supply_source' => ['required', 'in:expedia,vrbo'],
         ];
     }
 }

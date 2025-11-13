@@ -4,7 +4,11 @@ This project provides a minimal Laravel-style API for integrating with the Exped
 
 ## Endpoints
 
-- `GET /api/expedia/hotels?cityId=1506246&checkin=2024-09-01&checkout=2024-09-05&room1=2` – Fetches hotel data from Expedia.
+- `GET /api/expedia/hotels?ancestor_id=178286&language=en-US&include[]=property_ids` – Proxies the Rapid `/regions` search to list the property ids within a geography.
+- `GET /api/expedia/properties/availability?...` – Passes Rapid Shopping availability parameters straight through to `/properties/availability`.
+- `POST /api/expedia/itineraries` – Forwards booking payloads to Rapid `/itineraries`.
+- `GET /api/expedia/itineraries/{itinerary_id}` – Retrieves a previously created itinerary.
+- `DELETE /api/expedia/itineraries/{itinerary_id}` – Cancels an itinerary (when permitted by Rapid).
 
 Requests must include the header `X-API-TOKEN` with the value defined in `.env` as `API_TOKEN`.
 
@@ -12,10 +16,12 @@ Requests must include the header `X-API-TOKEN` with the value defined in `.env` 
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `cityId`  | int  | Expedia city identifier. |
-| `checkin` | date (`YYYY-MM-DD`) | Check-in date. |
-| `checkout` | date (`YYYY-MM-DD`) | Check-out date, must be after `checkin`. |
-| `room1` | string | Room occupancy description, e.g. `2` for two adults. |
+| `ancestor_id` | int | Expedia region identifier (for example, a city). |
+| `language` | string (`BCP47`) | Response locale, defaults to `en-US`. |
+| `include[]` | array | One or more of `standard`, `details`, `property_ids`, `property_ids_expanded`. |
+| `token` | string | Optional pagination token from the Rapid `Link` header. |
+
+For availability, booking, and cancellation, use the parameters defined in the [Rapid Lodging Shopping](https://developers.expediagroup.com/rapid/lodging/shopping) and [Rapid Lodging Booking](https://developers.expediagroup.com/rapid/lodging/booking) docs. The API simply validates basic structure (email/phone/room guest details) and forwards the payload and query string to Rapid.
 
 ## Tests
 

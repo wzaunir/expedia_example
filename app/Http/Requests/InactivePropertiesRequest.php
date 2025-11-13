@@ -15,8 +15,8 @@ class InactivePropertiesRequest extends FormRequest
     {
         return [
             'since' => ['required', 'date_format:Y-m-d'],
-            'page' => ['nullable', 'integer'],
-            'limit' => ['nullable', 'integer'],
+            'limit' => ['nullable', 'integer', 'between:1,250'],
+            'token' => ['nullable', 'string'],
         ];
     }
 }

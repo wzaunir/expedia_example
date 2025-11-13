@@ -12,6 +12,7 @@ use App\Http\Requests\AvailabilityRequest;
 use App\Http\Requests\InactivePropertiesRequest;
 use App\Http\Requests\DownloadPropertyContentRequest;
 use App\Http\Requests\DownloadPropertyCatalogRequest;
+use App\Http\Requests\CreateItineraryRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\TestCase;
@@ -20,19 +21,18 @@ class ExpediaControllerTest extends TestCase
 {
     public function test_search_hotels_success()
     {
-        Http::fake(function ($request) {
-            return Http::response([
-                'hotels' => [
-                    ['id' => '1', 'name' => 'Demo Hotel']
+        Http::fake([
+            'https://test.ean.com/v3/regions*' => Http::response([
+                'regions' => [
+                    ['id' => '178286', 'name' => 'Demo Region']
                 ]
-            ], 200);
-        });
+            ], 200),
+        ]);
 
         $request = SearchHotelsRequest::create('/api/expedia/hotels', 'GET', [
-            'cityId' => '1506246',
-            'checkin' => '2024-09-01',
-            'checkout' => '2024-09-05',
-            'room1' => '2',
+            'ancestor_id' => '178286',
+            'include' => ['property_ids'],
+            'language' => 'en-US',
         ]);
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
@@ -41,18 +41,24 @@ class ExpediaControllerTest extends TestCase
         $response = $middleware->handle($request, fn($req) => $controller->searchHotels($req));
 
         Http::assertSent(function ($request) {
-            return $request->hasHeader('Authorization', 'Bearer demo-key');
+            $auth = $request->header('Authorization');
+            return !empty($auth)
+                && str_contains($auth, 'EAN APIKey=demo-key')
+                && str_contains($auth, 'Signature=')
+                && str_contains($auth, 'timestamp=');
         });
 
         $this->assertEquals(200, $response->status());
-        $this->assertNotEmpty($response->getData(true)['hotels']);
+        $this->assertNotEmpty($response->getData(true)['regions']);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/rapid/hotels'
-                && $request['cityId'] === '1506246'
-                && $request['checkin'] === '2024-09-01'
-                && $request['checkout'] === '2024-09-05'
-                && $request['room1'] === '2';
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return str_starts_with($url, 'https://test.ean.com/v3/regions')
+                && $query['language'] === 'en-US'
+                && $query['include'] === 'property_ids'
+                && $query['ancestor_id'] === '178286';
         });
     }
 
@@ -73,11 +79,10 @@ class ExpediaControllerTest extends TestCase
     public function test_get_chains_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/chains*' => Http::response([
+            'https://test.ean.com/v3/chains*' => Http::response([
                 'chains' => [
                     ['id' => '1', 'name' => 'Demo Chain']
                 ],
-                'token' => 'next'
             ], 200)
         ]);
 
@@ -95,9 +100,12 @@ class ExpediaControllerTest extends TestCase
         $this->assertNotEmpty($response->getData(true)['chains']);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/rapid/chains'
-                && $request['limit'] === '10'
-                && $request['token'] === 'prev';
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return str_starts_with($url, 'https://test.ean.com/v3/chains')
+                && $query['limit'] === '10'
+                && $query['token'] === 'prev';
         });
     }
 
@@ -120,7 +128,7 @@ class ExpediaControllerTest extends TestCase
     public function test_get_region_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/regions/*' => Http::response([
+            'https://test.ean.com/v3/regions/*' => Http::response([
                 'id' => '1',
                 'name' => 'Demo Region'
             ], 200)
@@ -140,16 +148,17 @@ class ExpediaControllerTest extends TestCase
     public function test_get_property_content_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/properties/content*' => Http::response([
+            'https://test.ean.com/v3/properties/content*' => Http::response([
                 'property_id' => '123',
                 'name' => 'Demo Property'
             ], 200)
         ]);
 
         $request = PropertyContentRequest::create('/api/expedia/property-content', 'GET', [
-            'property_id' => '123',
+            'property_id' => ['123'],
             'language' => 'en-US',
-            'include' => 'details'
+            'supply_source' => 'expedia',
+            'include' => ['details'],
         ]);
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
@@ -161,10 +170,23 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals('Demo Property', $response->getData(true)['name']);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/content'
-                && $request['property_id'] === '123'
-                && $request['language'] === 'en-US'
-                && $request['include'] === 'details';
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+            $propertyIds = $query['property_id'] ?? ($query['property_id'][0] ?? null);
+            if (is_array($propertyIds)) {
+                $propertyIds = $propertyIds[0];
+            }
+
+            $include = $query['include'] ?? ($query['include'][0] ?? null);
+            if (is_array($include)) {
+                $include = $include[0];
+            }
+
+            return str_starts_with($url, 'https://test.ean.com/v3/properties/content')
+                && $propertyIds === '123'
+                && $query['language'] === 'en-US'
+                && $query['supply_source'] === 'expedia'
+                && $include === 'details';
         });
     }
 
@@ -185,7 +207,7 @@ class ExpediaControllerTest extends TestCase
     public function test_get_guest_reviews_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews*' => Http::response([
+            'https://test.ean.com/v3/properties/123/guest-reviews*' => Http::response([
                 'reviews' => [
                     ['id' => '1', 'comment' => 'Great stay']
                 ]
@@ -204,10 +226,12 @@ class ExpediaControllerTest extends TestCase
 
         $this->assertEquals('Great stay', $response->getData(true)['reviews'][0]['comment']);
 
-
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/123/guest-reviews'
-                && $request['language'] === 'en-US';
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return str_starts_with($url, 'https://test.ean.com/v3/properties/123/guest-reviews')
+                && $query['language'] === 'en-US';
         });
     }
 
@@ -228,19 +252,23 @@ class ExpediaControllerTest extends TestCase
     public function test_get_availability_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/properties/availability*' => Http::response([
+            'https://test.ean.com/v3/properties/availability*' => Http::response([
                 'property_id' => '123',
                 'available' => true
             ], 200)
         ]);
 
         $request = AvailabilityRequest::create('/api/expedia/properties/availability', 'GET', [
-            'property_id' => '123',
+            'property_id' => ['123'],
             'checkin' => '2024-09-01',
             'checkout' => '2024-09-05',
-            'occupancy' => '2',
+            'occupancy' => ['2'],
             'language' => 'en-US',
             'currency' => 'USD',
+            'country_code' => 'US',
+            'rate_plan_count' => 1,
+            'sales_channel' => 'website',
+            'sales_environment' => 'hotel_only',
         ]);
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
@@ -252,13 +280,28 @@ class ExpediaControllerTest extends TestCase
         $this->assertTrue($response->getData(true)['available']);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/availability'
-                && $request['property_id'] === '123'
-                && $request['checkin'] === '2024-09-01'
-                && $request['checkout'] === '2024-09-05'
-                && $request['occupancy'] === '2'
-                && $request['language'] === 'en-US'
-                && $request['currency'] === 'USD';
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+            $propertyIds = $query['property_id'] ?? ($query['property_id'][0] ?? null);
+            if (is_array($propertyIds)) {
+                $propertyIds = $propertyIds[0];
+            }
+            $occupancy = $query['occupancy'] ?? ($query['occupancy'][0] ?? null);
+            if (is_array($occupancy)) {
+                $occupancy = $occupancy[0];
+            }
+
+            return str_starts_with($url, 'https://test.ean.com/v3/properties/availability')
+                && $propertyIds === '123'
+                && $query['checkin'] === '2024-09-01'
+                && $query['checkout'] === '2024-09-05'
+                && $occupancy === '2'
+                && $query['language'] === 'en-US'
+                && $query['currency'] === 'USD'
+                && $query['country_code'] === 'US'
+                && $query['rate_plan_count'] === '1'
+                && $query['sales_channel'] === 'website'
+                && $query['sales_environment'] === 'hotel_only';
         });
     }
 
@@ -280,7 +323,7 @@ class ExpediaControllerTest extends TestCase
     public function test_get_inactive_properties_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/rapid/properties/inactive*' => Http::response([
+            'https://test.ean.com/v3/properties/inactive*' => Http::response([
                 'properties' => [
                     ['id' => '1']
                 ]
@@ -289,8 +332,8 @@ class ExpediaControllerTest extends TestCase
 
         $request = InactivePropertiesRequest::create('/api/expedia/properties/inactive', 'GET', [
             'since' => '2024-09-01',
-            'page' => '1',
             'limit' => '10',
+            'token' => 'abc',
         ]);
         $request->headers->set('X-API-TOKEN', 'secret-token');
 
@@ -302,10 +345,13 @@ class ExpediaControllerTest extends TestCase
         $this->assertNotEmpty($response->getData(true)['properties']);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/rapid/properties/inactive'
-                && $request['since'] === '2024-09-01'
-                && $request['page'] === '1'
-                && $request['limit'] === '10';
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return str_starts_with($url, 'https://test.ean.com/v3/properties/inactive')
+                && $query['since'] === '2024-09-01'
+                && $query['limit'] === '10'
+                && $query['token'] === 'abc';
         });
     }
 
@@ -329,7 +375,7 @@ class ExpediaControllerTest extends TestCase
     public function test_download_property_content_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/files/properties/content*' => Http::response([
+            'https://test.ean.com/v3/files/properties/content*' => Http::response([
                 'content_url' => 'https://example.com/file.zip'
             ], 200)
         ]);
@@ -348,12 +394,12 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals('https://example.com/file.zip', $response->getData(true)['content_url']);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/files/properties/content'
-                && $request['language'] === 'en-US'
-                && $request['supply_source'] === 'expedia'
-                && isset($request['signature'])
-                && isset($request['timestamp'])
-                && isset($request['key']);
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return str_starts_with($url, 'https://test.ean.com/v3/files/properties/content')
+                && $query['language'] === 'en-US'
+                && $query['supply_source'] === 'expedia';
         });
     }
 
@@ -374,7 +420,7 @@ class ExpediaControllerTest extends TestCase
     public function test_download_property_catalog_returns_response()
     {
         Http::fake([
-            'https://test.expediapartnercentral.com/files/properties/catalog*' => Http::response([
+            'https://test.ean.com/v3/files/properties/catalog*' => Http::response([
                 'catalog' => 'data'
             ], 200)
         ]);
@@ -393,11 +439,127 @@ class ExpediaControllerTest extends TestCase
         $this->assertEquals('data', $response->getData(true)['catalog']);
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://test.expediapartnercentral.com/files/properties/catalog'
-                && $request['language'] === 'en-US'
-                && $request['supply_source'] === 'expedia';
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return str_starts_with($url, 'https://test.ean.com/v3/files/properties/catalog')
+                && $query['language'] === 'en-US'
+                && $query['supply_source'] === 'expedia';
         });
 
     }
-}
 
+    public function test_create_itinerary_returns_response()
+    {
+        Http::fake([
+            'https://test.ean.com/v3/itineraries' => Http::response([
+                'itinerary_id' => 'ABC123'
+            ], 200)
+        ]);
+
+        $payload = [
+            'email' => 'john@example.com',
+            'phone' => [
+                'country_code' => '1',
+                'number' => '5550077',
+            ],
+            'rooms' => [
+                [
+                    'given_name' => 'John',
+                    'family_name' => 'Doe',
+                ],
+            ],
+        ];
+
+        $request = CreateItineraryRequest::create('/api/expedia/itineraries', 'POST', $payload);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->createItinerary($req));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('ABC123', $response->getData(true)['itinerary_id']);
+
+        Http::assertSent(function ($request) use ($payload) {
+            return $request->url() === 'https://test.ean.com/v3/itineraries'
+                && $request->method() === 'POST'
+                && $request->data()['email'] === $payload['email'];
+        });
+    }
+
+    public function test_create_itinerary_requires_minimum_fields()
+    {
+        Http::fake();
+
+        $request = CreateItineraryRequest::create('/api/expedia/itineraries', 'POST');
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->createItinerary($req));
+
+        $this->assertEquals(422, $response->status());
+    }
+
+    public function test_get_itinerary_returns_response()
+    {
+        Http::fake([
+            'https://test.ean.com/v3/itineraries/ABC123*' => Http::response([
+                'itinerary_id' => 'ABC123',
+                'status' => 'booked'
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/itineraries/ABC123', 'GET', [
+            'language' => 'en-US'
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->getItinerary($req, 'ABC123'));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('booked', $response->getData(true)['status']);
+
+        Http::assertSent(function ($request) {
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return str_starts_with($url, 'https://test.ean.com/v3/itineraries/ABC123')
+                && $query['language'] === 'en-US';
+        });
+    }
+
+    public function test_cancel_itinerary_returns_response()
+    {
+        Http::fake([
+            'https://test.ean.com/v3/itineraries/ABC123*' => Http::response([
+                'itinerary_id' => 'ABC123',
+                'status' => 'canceled'
+            ], 200)
+        ]);
+
+        $request = Request::create('/api/expedia/itineraries/ABC123', 'DELETE', [
+            'language' => 'en-US'
+        ]);
+        $request->headers->set('X-API-TOKEN', 'secret-token');
+
+        $controller = new ExpediaController();
+        $middleware = new ApiTokenMiddleware();
+        $response = $middleware->handle($request, fn($req) => $controller->cancelItinerary($req, 'ABC123'));
+
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('canceled', $response->getData(true)['status']);
+
+        Http::assertSent(function ($request) {
+            $url = $request->url();
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+
+            return $request->method() === 'DELETE'
+                && str_starts_with($url, 'https://test.ean.com/v3/itineraries/ABC123')
+                && $query['language'] === 'en-US';
+        });
+    }
+}

@@ -18,5 +18,8 @@ Route::middleware([ApiTokenMiddleware::class])->group(function () {
     Route::get('/expedia/files/property-content', [ExpediaController::class, 'downloadPropertyContent']);
     Route::get('/expedia/files/properties/catalog', [ExpediaController::class, 'downloadPropertyCatalog']);
 
-});
+    Route::post('/expedia/itineraries', [ExpediaController::class, 'createItinerary']);
+    Route::get('/expedia/itineraries/{itinerary_id}', [ExpediaController::class, 'getItinerary']);
+    Route::delete('/expedia/itineraries/{itinerary_id}', [ExpediaController::class, 'cancelItinerary']);
 
+});

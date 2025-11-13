@@ -1,0 +1,508 @@
+{
+  "info": {
+    "_postman_id": "8a61c81a-8c0c-4b13-9dcd-4d77ec2a3f9c",
+    "name": "Expedia Laravel API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "codex-cli"
+  },
+  "item": [
+    {
+      "name": "Search Hotels (Regions)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/hotels?ancestor_id={{region_id}}&language=en-US&include=property_ids",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "hotels"
+          ],
+          "query": [
+            {
+              "key": "ancestor_id",
+              "value": "{{region_id}}"
+            },
+            {
+              "key": "language",
+              "value": "en-US"
+            },
+            {
+              "key": "include",
+              "value": "property_ids"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Chains",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/chains?limit=10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "chains"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Region Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/region/{{region_id}}?language=en-US&include=standard",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "region",
+            "{{region_id}}"
+          ],
+          "query": [
+            {
+              "key": "language",
+              "value": "en-US"
+            },
+            {
+              "key": "include",
+              "value": "standard"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Property Content",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/property-content?property_id[]=12345&language=en-US&supply_source=expedia&include=details",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "property-content"
+          ],
+          "query": [
+            {
+              "key": "property_id[]",
+              "value": "12345"
+            },
+            {
+              "key": "language",
+              "value": "en-US"
+            },
+            {
+              "key": "supply_source",
+              "value": "expedia"
+            },
+            {
+              "key": "include",
+              "value": "details"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Guest Reviews",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/properties/{{property_id}}/guest-reviews?language=en-US",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "properties",
+            "{{property_id}}",
+            "guest-reviews"
+          ],
+          "query": [
+            {
+              "key": "language",
+              "value": "en-US"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Availability",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/properties/availability?property_id[]=12345&checkin=2025-01-10&checkout=2025-01-12&language=en-US&currency=USD&country_code=US&occupancy[]=2&rate_plan_count=4&sales_channel=website&sales_environment=hotel_only",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "properties",
+            "availability"
+          ],
+          "query": [
+            {
+              "key": "property_id[]",
+              "value": "12345"
+            },
+            {
+              "key": "checkin",
+              "value": "2025-01-10"
+            },
+            {
+              "key": "checkout",
+              "value": "2025-01-12"
+            },
+            {
+              "key": "language",
+              "value": "en-US"
+            },
+            {
+              "key": "currency",
+              "value": "USD"
+            },
+            {
+              "key": "country_code",
+              "value": "US"
+            },
+            {
+              "key": "occupancy[]",
+              "value": "2"
+            },
+            {
+              "key": "rate_plan_count",
+              "value": "4"
+            },
+            {
+              "key": "sales_channel",
+              "value": "website"
+            },
+            {
+              "key": "sales_environment",
+              "value": "hotel_only"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Inactive Properties",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/properties/inactive?since=2024-01-01&limit=50",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "properties",
+            "inactive"
+          ],
+          "query": [
+            {
+              "key": "since",
+              "value": "2024-01-01"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Properties By Polygon",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"Polygon\",\n  \"coordinates\": [\n    [\n      [-80.226, 25.774],\n      [-80.190, 25.774],\n      [-80.190, 25.806],\n      [-80.226, 25.806],\n      [-80.226, 25.774]\n    ]\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/expedia/properties/geography?include=property_ids&supply_source=expedia",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "properties",
+            "geography"
+          ],
+          "query": [
+            {
+              "key": "include",
+              "value": "property_ids"
+            },
+            {
+              "key": "supply_source",
+              "value": "expedia"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Download Property Content",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/files/property-content?language=en-US&supply_source=expedia",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "files",
+            "property-content"
+          ],
+          "query": [
+            {
+              "key": "language",
+              "value": "en-US"
+            },
+            {
+              "key": "supply_source",
+              "value": "expedia"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Download Property Catalog",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/files/properties/catalog?language=en-US&supply_source=expedia",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "files",
+            "properties",
+            "catalog"
+          ],
+          "query": [
+            {
+              "key": "language",
+              "value": "en-US"
+            },
+            {
+              "key": "supply_source",
+              "value": "expedia"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Itinerary (Booking)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"traveler@example.com\",\n  \"phone\": {\n    \"country_code\": \"1\",\n    \"number\": \"5550001234\"\n  },\n  \"rooms\": [\n    {\n      \"given_name\": \"Jane\",\n      \"family_name\": \"Doe\",\n      \"smoking\": false,\n      \"special_request\": \"High floor please\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"type\": \"customer_card\",\n      \"number\": \"4111111111111111\",\n      \"security_code\": \"123\",\n      \"expiration_month\": \"08\",\n      \"expiration_year\": \"2026\",\n      \"billing_contact\": {\n        \"given_name\": \"Jane\",\n        \"family_name\": \"Doe\",\n        \"address\": {\n          \"line_1\": \"1 Main St\",\n          \"city\": \"Miami\",\n          \"state_province_code\": \"FL\",\n          \"postal_code\": \"33101\",\n          \"country_code\": \"US\"\n        }\n      }\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/expedia/itineraries",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "itineraries"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Itinerary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/itineraries/{{itinerary_id}}?language=en-US",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "itineraries",
+            "{{itinerary_id}}"
+          ],
+          "query": [
+            {
+              "key": "language",
+              "value": "en-US"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cancel Itinerary",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "X-API-TOKEN",
+            "value": "{{api_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/expedia/itineraries/{{itinerary_id}}?language=en-US",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "expedia",
+            "itineraries",
+            "{{itinerary_id}}"
+          ],
+          "query": [
+            {
+              "key": "language",
+              "value": "en-US"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api"
+    },
+    {
+      "key": "api_token",
+      "value": "secret-token"
+    },
+    {
+      "key": "region_id",
+      "value": "178286"
+    },
+    {
+      "key": "property_id",
+      "value": "12345"
+    },
+    {
+      "key": "itinerary_id",
+      "value": "ABC123"
+    }
+  ]
+}
