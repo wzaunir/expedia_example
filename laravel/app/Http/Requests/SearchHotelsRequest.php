@@ -37,7 +37,7 @@ class SearchHotelsRequest extends FormRequest
             'language' => ['required', 'string'],
             'include' => ['required', 'array', 'min:1'],
             'include.*' => ['in:standard,details,property_ids,property_ids_expanded'],
-            'ancestor_id' => ['nullable', 'integer'],
+            'ancestor_id' => ['required', 'integer'],
             'area' => ['nullable', 'string'],
             'type' => ['nullable', 'string'],
             'token' => ['nullable', 'string'],

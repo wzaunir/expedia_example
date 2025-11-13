@@ -8,6 +8,10 @@ class GuestReviewsRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        if (!$this->has('property_id') && $this->route('property_id')) {
+            $this->merge(['property_id' => $this->route('property_id')]);
+        }
+
         if (!$this->has('language')) {
             $this->merge(['language' => 'en-US']);
         }

@@ -59,8 +59,9 @@ class ExpediaController extends Controller
         $signature = $this->signRequest();
         $userAgent = config('services.expedia.user_agent', 'ExpediaLaravelDemo/1.0');
         $sessionId = optional($request)->header('X-Customer-Session-Id')
-            ?? optional($request)->session()?->getId()
-            ?? (string) Str::uuid();
+            ?? ($request && method_exists($request, 'hasSession') && $request->hasSession()
+                ? $request->session()->getId()
+                : (string) Str::uuid());
 
         return Http::baseUrl(config('services.expedia.base_url'))
             ->acceptJson()
@@ -167,7 +168,6 @@ class ExpediaController extends Controller
      */
     public function searchHotels(SearchHotelsRequest $request)
     {
-        $request->validateResolved();
         $params = $request->validated();
 
         try {
@@ -182,7 +182,6 @@ class ExpediaController extends Controller
      */
     public function getChains(ChainsRequest $request)
     {
-        $request->validateResolved();
         $params = $request->validated();
 
         try {
@@ -211,7 +210,6 @@ class ExpediaController extends Controller
      */
     public function getPropertyContent(PropertyContentRequest $request)
     {
-        $request->validateResolved();
         $params = $request->validated();
 
         try {
@@ -226,8 +224,6 @@ class ExpediaController extends Controller
      */
     public function getGuestReviews(GuestReviewsRequest $request, string $property_id)
     {
-        $request->merge(['property_id' => $property_id]);
-        $request->validateResolved();
         $params = Arr::except($request->validated(), ['property_id']);
         $id = $property_id;
 
@@ -243,7 +239,6 @@ class ExpediaController extends Controller
      */
     public function getAvailability(AvailabilityRequest $request)
     {
-        $request->validateResolved();
         $params = $request->validated();
 
         try {
@@ -258,7 +253,6 @@ class ExpediaController extends Controller
      */
     public function getPropertiesByPolygon(PropertiesByPolygonRequest $request)
     {
-        $request->validateResolved();
         $validated = $request->validated();
         $query = Arr::only($validated, ['include', 'supply_source', 'billing_terms', 'partner_point_of_sale', 'payment_terms', 'platform_name']);
         $body = $validated['geojson'];
@@ -275,7 +269,6 @@ class ExpediaController extends Controller
      */
     public function getInactiveProperties(InactivePropertiesRequest $request)
     {
-        $request->validateResolved();
         $params = $request->validated();
 
         try {
@@ -290,7 +283,6 @@ class ExpediaController extends Controller
      */
     public function downloadPropertyContent(DownloadPropertyContentRequest $request)
     {
-        $request->validateResolved();
         $params = $request->validated();
 
         try {
@@ -305,7 +297,6 @@ class ExpediaController extends Controller
      */
     public function downloadPropertyCatalog(DownloadPropertyCatalogRequest $request)
     {
-        $request->validateResolved();
         $params = $request->validated();
 
         try {
@@ -320,7 +311,6 @@ class ExpediaController extends Controller
      */
     public function createItinerary(CreateItineraryRequest $request)
     {
-        $request->validateResolved();
         $payload = $request->validated();
 
         try {
